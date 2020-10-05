@@ -113,20 +113,20 @@ function funcs.rayIter(pos, dir)
 		if not p then
 			-- avoid skipping the first position
 			p = vector.round(pos)
-			return vector.new(p)
+			return p:new()
 		end
 
 		-- find the position which has the smallest distance to the line
 		local choose = {}
 		local choosefit = vector.new()
 		for i in pairs(step) do
-			choose[i] = vector.new(p)
+			choose[i] = p:new()
 			choose[i][i] = choose[i][i] + step[i]
-			choosefit[i] = vector.dot(vector.normalize(vector.subtract(choose[i], pos)), dir)
+			choosefit[i] = (choose[i] - pos):normalize():dot(dir)
 		end
 		p = choose[vector.get_max_coord(choosefit)]
 
-		return vector.new(p)
+		return p:new()
 	end
 end
 
@@ -274,49 +274,49 @@ end
 function funcs.plane(ps)
 	-- sort positions and imagine the first one (A) as vector.zero
 	vector.sort_positions(ps)
-	local pos = ps[1]
+	local pos = vector.new(ps[1])
 	local B = vector.subtract(ps[2], pos)
 	local C = vector.subtract(ps[3], pos)
 
 	-- get the positions for the fors
-	local cube_p1 = {x=0, y=0, z=0}
-	local cube_p2 = {x=0, y=0, z=0}
+	local cube_p1 = vector.new()
+	local cube_p2 = vector.new()
 	for i in pairs(cube_p1) do
 		cube_p1[i] = math.min(B[i], C[i], 0)
 		cube_p2[i] = math.max(B[i], C[i], 0)
 	end
-	cube_p1 = vector.apply(cube_p1, math.floor)
-	cube_p2 = vector.apply(cube_p2, math.ceil)
+	cube_p1 = cube_p1:apply(math.floor)
+	cube_p2 = cube_p2:apply(math.floor)
 
-	local vn = vector.normalize(vector.cross(B, C))
+	local vn = vector.cross(B, C):normalize()
 
-	local nAB = vector.normalize(B)
-	local nAC = vector.normalize(C)
-	local angle_BAC = math.acos(vector.dot(nAB, nAC))
+	local nAB = B:normalize()
+	local nAC = C:normalize()
+	local angle_BAC = math.acos(nAB:dot(nAC))
 
-	local nBA = vector.multiply(nAB, -1)
-	local nBC = vector.normalize(vector.subtract(C, B))
-	local angle_ABC = math.acos(vector.dot(nBA, nBC))
+	local nBA = -nAB
+	local nBC = (C - B):normalize()
+	local angle_ABC = math.acos(nBA:dot(nBC))
 
 	for z = cube_p1.z, cube_p2.z do
 		for y = cube_p1.y, cube_p2.y do
 			for x = cube_p1.x, cube_p2.x do
-				local p = {x=x, y=y, z=z}
-				local n = -vector.dot(p, vn)/vector.dot(vn, vn)
+				local p = vector.new(x, y, z)
+				local n = -p:dot(vn)/vn:dot(vn)
 				if math.abs(n) <= 0.5 then
-					local ep = vector.add(p, vector.multiply(vn, n))
-					local nep = vector.normalize(ep)
-					local angle_BAep = math.acos(vector.dot(nAB, nep))
-					local angle_CAep = math.acos(vector.dot(nAC, nep))
+					local ep = p + vn * n
+					local nep = ep:normalize()
+					local angle_BAep = math.acos(nAB:dot(nep))
+					local angle_CAep = math.acos(nAC:dot(nep))
 					local angldif = angle_BAC - (angle_BAep+angle_CAep)
 					if math.abs(angldif) < 0.001 then
-						ep = vector.subtract(ep, B)
-						nep = vector.normalize(ep)
-						local angle_ABep = math.acos(vector.dot(nBA, nep))
-						local angle_CBep = math.acos(vector.dot(nBC, nep))
+						ep = ep - B
+						nep = ep:normalize()
+						local angle_ABep = math.acos(nBA:dot(nep))
+						local angle_CBep = math.acos(nBC:dot(nep))
 						local angldif = angle_ABC - (angle_ABep+angle_CBep)
 						if math.abs(angldif) < 0.001 then
-							table.insert(ps, vector.add(pos, p))
+							table.insert(ps, pos + p)
 						end
 					end
 				end
